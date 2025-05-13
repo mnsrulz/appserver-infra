@@ -15,3 +15,11 @@ spec:
                 name: nginx
                 port:
                   number: 80
+          - path: /helloworld
+            pathType: Prefix
+            backend:
+              service:
+                name: hello-world
+                port:
+                  number: 80
+        

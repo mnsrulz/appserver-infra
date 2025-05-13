@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world
+spec:
+  ports:
+    - name: hello-world
+      port: 80
+      targetPort: 80
+  selector:
+    app: hello-world
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+spec:
+  selector:
+    matchLabels:
+      app: hello-world
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: hello-world
+    spec:
+      # volumes:
+      #   - name: staticdirectory
+      #     hostPath:
+      #       path: /home/madhu/live 
+      containers:
+        - name: hello-world
+          image: hello-world
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          # env:
+          #   - name: SERVER_ROOT
+          #     value: "./pserve"
+          #   - name: SERVER_DIRECTORY_LISTING
+          #     value: "true"
+          # volumeMounts:
+          #   - mountPath: /pserve
+          #     name: staticdirectory
+
+
