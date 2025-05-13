@@ -32,7 +32,7 @@ spec:
       #       path: /home/madhu/live 
       containers:
         - name: hello-world
-          image: strm/helloworld-http
+          image: mcr.microsoft.com/dotnet/samples:aspnetapp
           imagePullPolicy: Always
           ports:
             - containerPort: 80
