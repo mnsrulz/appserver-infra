@@ -1,1 +1,1 @@
-# mzdesktop
+# appserver-infra
