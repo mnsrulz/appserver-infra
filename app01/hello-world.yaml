@@ -7,7 +7,7 @@ spec:
   ports:
     - name: hello-world
       port: 80
-      targetPort: 80
+      targetPort: 8080
   selector:
     app: hello-world
 
@@ -35,7 +35,7 @@ spec:
           image: mcr.microsoft.com/dotnet/samples:aspnetapp
           imagePullPolicy: Always
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           # env:
           #   - name: SERVER_ROOT
           #     value: "./pserve"
