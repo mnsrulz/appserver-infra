@@ -40,7 +40,7 @@ spec:
             - name: DATA_DIR
               value: "./APP_DATA"
             - name: STREAMLIT_BASE_URL
-              value: "./mzdata"
+              value: "/mzdata"
           #   - name: SERVER_DIRECTORY_LISTING
           #     value: "true"
           volumeMounts:
