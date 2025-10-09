@@ -22,4 +22,11 @@ spec:
                 name: hello-world
                 port:
                   number: 80
+          - path: /mzdata
+            pathType: Prefix
+            backend:
+              service:
+                name: mzdatastreamlit
+                port:
+                  number: 80
         
