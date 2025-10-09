@@ -38,7 +38,7 @@ spec:
             - containerPort: 8501          
           env:
             - name: DATA_DIR
-              value: "./APP_DATA"
+              value: "APP_DATA"
             - name: STREAMLIT_BASE_URL
               value: "/mzdata"
           #   - name: SERVER_DIRECTORY_LISTING
