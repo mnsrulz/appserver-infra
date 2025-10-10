@@ -9,14 +9,14 @@ spec:
     app.kubernetes.io/name: traefik
   ports:
     - name: web
-      port: 80
-      targetPort: 80
-      nodePort: 30080    # Access HTTP: http://localhost:30080
+      port: 80              # still exposed to outside as 80
+      targetPort: 8000      # map to actual pod port 8000
+      nodePort: 30080       # NodePort accessible from WSL/host
     - name: websecure
       port: 443
-      targetPort: 443
-      nodePort: 30443    # Access HTTPS: https://localhost:30443
+      targetPort: 8443      # map to actual pod port 8443
+      nodePort: 30443
     - name: dashboard
       port: 8080
-      targetPort: 8080
-      nodePort: 32080    # Traefik dashboard: http://localhost:32080/dashboard/
+      targetPort: 8080      # matches pod dashboard port
+      nodePort: 32080
