@@ -15,23 +15,34 @@ do {
 } until ($WSL_IP)
 Write-Host "WSL IP detected as: $WSL_IP"
 
-# 3. Define NodePorts to forward
-$Ports = @(30080, 30443, 32080)
+# 3. Define port forwarding mappings:
+#    ListenPort (Windows) -> ConnectPort (WSL)
+$PortMap = @{
+    80   = 30080   # HTTP
+    30443  = 30443   # HTTPS
+    32080 = 32080  # Traefik dashboard (optional)
+}
 
-# 4. Loop through ports and add forwarding
-foreach ($port in $Ports) {
-    # Remove old forwarding if exists
-    netsh interface portproxy delete v4tov4 listenport=$port listenaddress=0.0.0.0 2>$null
+# 4. Loop through mappings and configure portproxy
+foreach ($mapping in $PortMap.GetEnumerator()) {
+    $listenPort = $mapping.Key
+    $connectPort = $mapping.Value
+
+    # Remove old forwarding if it exists
+    netsh interface portproxy delete v4tov4 listenport=$listenPort listenaddress=0.0.0.0 2>$null
 
     # Add new forwarding
     netsh interface portproxy add v4tov4 `
-        listenport=$port `
+        listenport=$listenPort `
         listenaddress=0.0.0.0 `
-        connectport=$port `
+        connectport=$connectPort `
         connectaddress=$WSL_IP
 
-    Write-Host "Forwarded localhost:$port -> ${WSL_IP}:$port"
+    Write-Host "Forwarded localhost:$listenPort -> ${WSL_IP}:$connectPort"
 }
 
-Write-Host "`n✅ All NodePorts forwarded from WSL to Windows localhost"
-Write-Host "You can now access your apps via http://localhost:30080, http://localhost:32080, etc."
+Write-Host "`n✅ All ports forwarded from Windows to WSL."
+Write-Host "You can now access Traefik via:"
+Write-Host "  → http://localhost"
+Write-Host "  → https://localhost"
+Write-Host "  → http://localhost:32080 (dashboard)"

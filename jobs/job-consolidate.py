@@ -52,7 +52,7 @@ def swap_directories(dir_a: str, dir_b: str):
     b.rename(a)     # dir_b -> dir_a
     tmp.rename(b)   # temp -> dir_b
 
-    pbar.write(f"✅ Swapped '{dir_a}' <-> '{dir_b}'")
+    pbar.write(f"Swapped '{dir_a}' <-> '{dir_b}'")
 
 def data_exists_for_dt(dt: str) -> bool:
     """Check if at least one parquet file exists for given dt in any symbol partition."""
@@ -61,24 +61,18 @@ def data_exists_for_dt(dt: str) -> bool:
 
 def handle_sigint(sig, frame):
     global stop_requested
-    pbar.write("\n⚠️  Cancellation requested... will finish current dt and then stop.")
+    pbar.write("Cancellation requested... will finish current dt and then stop.")
     stop_requested = True
 
 signal.signal(signal.SIGINT, handle_sigint)
 # -------------------------------------
 
-# --- Configuration ---
-OPTIMIZATION_BATCH_SIZE = 10  # Run optimization after every 10 dt consolidations
-
-# Counter for how many dt's have been consolidated since last optimization
-batch_counter = 0
-
+### Step 1: Consolidate by symbol and dt into partitioned parquet files ###
 # tqdm progress bar
 with tqdm(dt_list, desc="Processing Dates", unit="day") as pbar:
-    for i, dt in enumerate(dt_list, start=1):
-        os.makedirs(CONSOLIDATED_DATA_DIR_B, exist_ok=True)
+    for i, dt in enumerate(dt_list, start=1):        
         if stop_requested:
-            pbar.write("🛑 Stopping before starting next dt.")
+            pbar.write("Stopping before starting next dt.")
             break
 
         pbar.set_postfix_str(f"dt={dt}")
@@ -114,7 +108,7 @@ with tqdm(dt_list, desc="Processing Dates", unit="day") as pbar:
                     SELECT dt, symbol, option, option_symbol, option_type,
                         CAST(strike AS FLOAT)/1000 AS strike,
                         CAST(strptime('20'|| expiration, '%Y%m%d') AS DATE) AS expiration,
-                        open_interest, volume, delta, gamma, iv
+                        open_interest, volume, delta, gamma, vega, theta, rho, theo, open, high, iv, bid, ask
                     FROM (
                         SELECT dt,
                                REPLACE(symbol,'_', '') AS symbol,
@@ -126,7 +120,7 @@ with tqdm(dt_list, desc="Processing Dates", unit="day") as pbar:
                                        ['option_symbol', 'expiration', 'option_type', 'strike']
                                    )
                                ),
-                               open_interest, volume, delta, gamma, iv
+                               open_interest, volume, delta, gamma, vega, theta, rho, theo, open, high, iv, bid, ask
                         FROM RAW_OPTIONS_DATA
                         WHERE dt = '{dt}'
                     ) T                    
@@ -135,41 +129,51 @@ with tqdm(dt_list, desc="Processing Dates", unit="day") as pbar:
                 --(FORMAT PARQUET, PARTITION_BY (symbol), OVERWRITE TRUE);
             """)
             
-            pbar.write(f"✅ Consolidated dt={dt} in {time.perf_counter() - start_time:,.2f} seconds.")
-
-            batch_counter += 1
-            # --- Run optimization after batch or at the end of the list ---
-            if batch_counter >= OPTIMIZATION_BATCH_SIZE or i == len(dt_list):
-                pbar.write(f"✅ Now starting optimization after {batch_counter} dt(s)...")
-                start_time = time.perf_counter()
-                # Optimization query
-                con.execute(f"""
-                    COPY (
-                        SELECT * FROM READ_PARQUET('{CONSOLIDATED_DATA_DIR}/**/*.parquet', hive_partitioning=1)                    
-                    ) TO '{CONSOLIDATED_DATA_DIR_B}'
-                    --(FORMAT PARQUET, PARTITION_BY (symbol, dt), APPEND TRUE);
-                    (FORMAT PARQUET, PARTITION_BY (symbol), OVERWRITE TRUE);
-                """)
-
-                swap_directories(CONSOLIDATED_DATA_DIR, CONSOLIDATED_DATA_DIR_B)
-                elapsed = time.perf_counter() - start_time
-                pbar.write(f"✅ Optimization done after {batch_counter} dt(s) in {elapsed:,.2f} seconds")
-
-                # Reset batch counter
-                batch_counter = 0
-
-                # Clean up temp directory if it still exists
-                shutil.rmtree(CONSOLIDATED_DATA_DIR_B)
-                pbar.write(f"✅ Cleaned up temp directory '{CONSOLIDATED_DATA_DIR_B}'")
+            pbar.write(f"Consolidated dt={dt} in {time.perf_counter() - start_time:,.2f} seconds.")
 
         except Exception as e:
-            pbar.write(f"❌ Error processing dt={dt}: {e}")
+            pbar.write(f"Error processing dt={dt}: {e}")
             continue
         
         pbar.update()
+
+### Step:2 Final consolidation by symbol into single parquet files ###
+
+if os.path.exists(CONSOLIDATED_DATA_DIR_B) and os.path.isdir(CONSOLIDATED_DATA_DIR_B):
+    shutil.rmtree(CONSOLIDATED_DATA_DIR_B)
+
+os.makedirs(CONSOLIDATED_DATA_DIR_B, exist_ok=True)
+
+symbol_dirs = [d for d in Path(CONSOLIDATED_DATA_DIR).iterdir() if d.is_dir()]
+
+for symbol_dir in tqdm(symbol_dirs, desc="Consolidating symbols", unit="symbol"):
+    if stop_requested:
+        tqdm.write("Stopping before starting next dt.")
+        break
+    symbol = symbol_dir.name    
+    # Create output subfolder (e.g., consolidated-data-merged/AAPL/)
+    output_symbol_dir = Path(CONSOLIDATED_DATA_DIR_B) / symbol
+    output_symbol_dir.mkdir(parents=True, exist_ok=True)
+    
+    parquet_pattern = f"{symbol_dir}/*.parquet"
+    output_file = output_symbol_dir / "data.parquet"
+
+    # Consolidate all parquet files for the symbol
+    con.execute(f"""
+        COPY (
+            SELECT * FROM read_parquet('{parquet_pattern}')
+            ORDER BY dt
+        ) TO '{output_file}' (FORMAT PARQUET);
+    """)
+
+    tqdm.write(f"Consolidated {symbol} -> {output_file}")
+
+if not stop_requested:
+    # Swap directories
+    swap_directories(CONSOLIDATED_DATA_DIR, CONSOLIDATED_DATA_DIR_B)
 
 pbar.close()
 if stop_requested:
     pbar.write("Process was cancelled by user.")
 else:
-    pbar.write("✅ Done (or cancelled gracefully).")
+    pbar.write("Done (or cancelled gracefully).")
