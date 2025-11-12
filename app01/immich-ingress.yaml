@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: immich-ingress
+  namespace: immich
+  annotations:
+    # --- Traefik timeout settings ---
+    traefik.ingress.kubernetes.io/client-body-timeout: "600s"     # Allow long uploads (10 min)  doesn't seems to be working
+    traefik.ingress.kubernetes.io/client-header-timeout: "120s"
+    traefik.ingress.kubernetes.io/server-read-timeout: "600s"
+    traefik.ingress.kubernetes.io/server-write-timeout: "600s"
+    traefik.ingress.kubernetes.io/max-request-body-bytes: "2147483648" # 2 GB limit
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: immich-server
+                port:
+                  number: 2283

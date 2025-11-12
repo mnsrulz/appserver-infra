@@ -29,4 +29,11 @@ spec:
                 name: mzdatastreamlit
                 port:
                   number: 80
+          - path: /copyparty
+            pathType: Prefix
+            backend:
+              service:
+                name: copyparty
+                port:
+                  number: 80
         
