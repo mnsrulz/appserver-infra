@@ -6,6 +6,9 @@ data:
   copyparty.conf: |
     [global]
     rp-loc: /copyparty/
+    [data]
+    path = /w
+
 ---
 apiVersion: v1
 kind: Service
