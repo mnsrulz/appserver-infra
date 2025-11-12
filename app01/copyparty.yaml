@@ -6,9 +6,9 @@ data:
   copyparty.conf: |
     [global]
     rp-loc: /copyparty/
-    
-    [data]
-    path = /w
+
+    [/]     # this URL will be mapped to...
+      /w    # ...this folder on the server filesystem
 
 ---
 apiVersion: v1
