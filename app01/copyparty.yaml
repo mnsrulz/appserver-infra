@@ -44,10 +44,12 @@ spec:
       containers:
         - name: copyparty
           image: ghcr.io/9001/copyparty-ac:1.19.20
-          args: ["--config", "/etc/copyparty/copyparty.conf"] # Point to the mounted config file
           imagePullPolicy: Always
           ports:
             - containerPort: 3923
+          env:
+          - name: PRTY_CONFIG
+            value: "/etc/copyparty/copyparty.conf"
           volumeMounts:
             - name: copypartydatadir
               mountPath: /w              
