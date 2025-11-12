@@ -6,6 +6,7 @@ data:
   copyparty.conf: |
     [global]
     rp-loc: /copyparty/
+    
     [data]
     path = /w
 
